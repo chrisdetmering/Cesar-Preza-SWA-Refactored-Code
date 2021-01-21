@@ -10,53 +10,52 @@ class App extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      isLoading: false,
+      isLoading: true,
       currentPage: 1,
       characters: []
     }
     this.handleInput = this.handleInput.bind(this)
+    this.getCharacters = this.getCharacters.bind(this); 
+    this.handleNextPage = this.handleNextPage.bind(this); 
   }
 
   async componentDidMount() {
-  const peopleURL = `https://swapi.dev/api/people/`
-  const peopleResponse = await axios.get(peopleURL)
-  const characters = []
-
-  for(const character of peopleResponse.data.results) {
-    const homeWorldURL = character.homeworld.replace('http', 'https')
-    const homeWorldResponse = await axios.get(homeWorldURL)
-    const speciesURL = character.species.toString().replace('http', 'https')
-    const speciesResponse = await axios.get(speciesURL)
-    character.homeworld = homeWorldResponse.data.name;
-    if (!speciesResponse.data.name) {
-      character.species = 'Human'
-    } else {
-      character.species = speciesResponse.data.name;
-    }
-    
-    characters.push(character)
-    this.setState({ characters, isLoading: true })
-  }
+  this.getCharacters(`https://swapi.dev/api/people/`);
 }
   
-  async handleInput(searchTerm) {
-    const searchUrl = await axios.get(`https://swapi.dev/api/people/?search=${searchTerm}`)
-    const characters = []
-    for (const characterSearch of searchUrl.data.results) {
-      const homeWorldURL = characterSearch.homeworld.replace('http', 'https')
-      const homeWorldResponse = await axios.get(homeWorldURL)
-      const speciesURL = characterSearch.species.toString().replace('http', 'https')
-      const speciesResponse = await axios.get(speciesURL)
-        characterSearch.homeworld = homeWorldResponse.data.name;
-        if (!speciesResponse.data.name) {
-          characterSearch.species = 'Human'
-        } else {
-          characterSearch.species = speciesResponse.data.name;
-        }
-    characters.push(characterSearch)
-    this.setState({ characters, isLoading: true })
-    }
+  async handleInput(event) {
+    const searchTerm = event.target.value; 
+    this.getCharacters(`https://swapi.dev/api/people/?search=${searchTerm}`);
 }
+
+async getCharacters(url) { 
+  const peopleResponse = await axios.get(url);
+  const characters = [];
+
+  for (const character of peopleResponse.data.results) {
+      const homeWorldURL = character.homeworld.replace('http', 'https');
+      const homeWorldResponse = await axios.get(homeWorldURL);
+      character.homeworld = homeWorldResponse.data.name;
+
+      if (character.species.length === 0) {
+          character.species = 'Human';
+      } else {
+          const speciesURL = character.species[0].replace('http', 'https');
+          const speciesResponse = await axios.get(speciesURL);
+          character.species = speciesResponse.data.name;
+      }
+      
+      characters.push(character);
+  }
+
+  this.setState({ characters, isLoading: false });
+}
+
+
+  handleNextPage(pageNum) { 
+    this.setState({isLoading: true})
+    this.getCharacters(`https://swapi.dev/api/people/?page=`+pageNum);
+  }
 
 
   render() {
@@ -65,8 +64,7 @@ class App extends Component {
         <Header />
         <Input handleInput={this.handleInput} />
         <CharacterTable characterData={this.state.characters} isLoading={this.state.isLoading} />
-        <Pagination handleNextPage={this.handleNextPage} />
-        
+        <Pagination onPageClick={this.handleNextPage} />
       </div>
     );
   }
